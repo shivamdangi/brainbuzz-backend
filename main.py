@@ -11,6 +11,7 @@ from database import engine, get_db, Base
 import models, schemas, auth, crud
 from sqlalchemy import text
 import os
+import bcrypt
 try:
     from pywebpush import webpush, WebPushException
 except Exception:
@@ -70,7 +71,7 @@ app.add_middleware(
         "http://localhost:8080",
         "http://localhost:5173",
         "http://localhost:3000",
-        "https://brainbuzz-learn-hub.vercel.app/"
+        "https://brainbuzz-learn-hub.vercel.app/", "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -232,6 +233,28 @@ def create_user_admin(
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db=db, user=user)
+
+@app.put("/admin/users/{user_id}/password")
+def change_user_password(
+    user_id: int,
+    password_data: dict,
+    current_user: schemas.UserInDB = Depends(auth.get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Change user password (admin only)"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if "password" not in password_data:
+        raise HTTPException(status_code=400, detail="Password is required")
+    
+    # Hash the new password
+    hashed_password = bcrypt.hashpw(password_data["password"].encode('utf-8'), bcrypt.gensalt())
+    user.hashed_password = hashed_password.decode('utf-8')
+    
+    db.commit()
+    return {"message": "Password updated successfully"}
 
 @app.get("/admin/stats")
 def get_admin_stats(
