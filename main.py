@@ -70,6 +70,7 @@ app.add_middleware(
         "http://localhost:8080",
         "http://localhost:5173",
         "http://localhost:3000",
+        "https://brainbuzz-learn-hub.vercel.app/"
     ],
     allow_credentials=True,
     allow_methods=["*"],
